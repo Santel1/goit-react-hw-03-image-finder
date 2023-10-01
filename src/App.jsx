@@ -62,7 +62,7 @@ export class App extends Component {
   };
 
   loadMore = async () => {
-    this.setState(prevState => {
+    await this.setState(prevState => {
       return {
         page: prevState.page + 1,
         isLoading: true,

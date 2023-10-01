@@ -141,7 +141,7 @@ export class App extends Component {
 
   render() {
     const showImages =
-      Array.isArray(this.state.images) && this.state.images.length != 0;
+      Array.isArray(this.state.images) && this.state.images.length !== 0;
 
     return (
       <div>

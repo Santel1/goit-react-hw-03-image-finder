@@ -14,6 +14,8 @@ export class App extends Component {
     error: null,
     searchedImages: null,
     page: 1,
+    loadMore: false,
+    totalHits: false,
     modal: {
       isOpen: false,
       data: null,
@@ -31,6 +33,7 @@ export class App extends Component {
       return {
         images: null,
         page: 1,
+        totalHits: 0,
       };
     });
     try {
@@ -39,7 +42,18 @@ export class App extends Component {
         this.state.searchedImages,
         this.state.page
       );
-      this.setState({ images: images.hits });
+      this.setState(
+        {
+          images: images.hits,
+          totalHits: images.totalHits,
+          loadMore: true,
+        },
+        () => {
+          if (this.state.images.length === this.state.totalHits) {
+            this.setState({ loadMore: false });
+          }
+        }
+      );
     } catch (error) {
       this.setState({ error: error.message });
     } finally {
@@ -48,10 +62,10 @@ export class App extends Component {
   };
 
   loadMore = async () => {
-    await this.setState(prevState => {
+    this.setState(prevState => {
       return {
-        isLoading: true,
         page: prevState.page + 1,
+        isLoading: true,
       };
     });
 
@@ -61,16 +75,25 @@ export class App extends Component {
         this.state.page
       );
 
-      this.setState(prevState => {
-        return {
-          images: [...prevState.images, ...newImages.hits],
-          isLoading: false,
-        };
-      });
+      this.setState(
+        prevState => {
+          const updatedImages = [...prevState.images, ...newImages.hits];
+          return {
+            images: updatedImages,
+            isLoading: false,
+          };
+        },
+        () => {
+          if (this.state.images.length === this.state.totalHits) {
+            this.setState({ loadMore: false });
+          }
+        }
+      );
     } catch (error) {
-      this.setState({ error: error.message });
-    } finally {
-      this.setState({ isLoading: false });
+      this.setState({
+        error: error.message,
+        isLoading: false,
+      });
     }
   };
 
@@ -90,6 +113,7 @@ export class App extends Component {
         data: modalData,
       },
     });
+    window.addEventListener('keydown', this.onKeyDown);
   };
 
   closeModal = () => {
@@ -100,11 +124,24 @@ export class App extends Component {
         data: null,
       },
     });
+    window.removeEventListener('keydown', this.onKeyDown);
+  };
+
+  onOverlayClick = event => {
+    if (event.currentTarget === event.target) {
+      this.closeModal();
+    }
+  };
+
+  onKeyDown = event => {
+    if (event.code === 'Escape') {
+      this.closeModal();
+    }
   };
 
   render() {
     const showImages =
-      Array.isArray(this.state.images) && this.state.images.length;
+      Array.isArray(this.state.images) && this.state.images.length != 0;
 
     return (
       <div>
@@ -116,11 +153,11 @@ export class App extends Component {
         )}
         {this.state.modal.isOpen && (
           <Modal
-            closeModal={this.closeModal}
+            closeModal={this.onOverlayClick}
             largeImage={this.state.modal.data}
           />
         )}
-        {showImages && <Button onClick={this.loadMore} />}
+        {this.state.loadMore && <Button onClick={this.loadMore} />}
       </div>
     );
   }
